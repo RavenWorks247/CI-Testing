@@ -1,4 +1,4 @@
-from app import app
+from .app import app
 from bs4 import BeautifulSoup
 
 client = app.test_client()

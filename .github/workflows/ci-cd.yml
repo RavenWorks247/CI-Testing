@@ -63,8 +63,11 @@ jobs:
           python -m compileall .
 
       - name: Run Tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}
         run: |
           pytest -v
+
 
   build:
     needs: tests
