@@ -87,6 +87,8 @@ jobs:
     steps:
 
       - name: Deploy latest code
+        env:
+          APP_DIR: /home/kali/CI-Testing
         run: |
           set -e
 
