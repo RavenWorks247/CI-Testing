@@ -10,16 +10,12 @@ def home():
 
 @app.route("/api/message")
 def message():
-    return jsonify({
-        "message": "Hello from Backend!"
-    })
+    return jsonify({"message": "Hello from Backend!"})
 
 
 @app.route("/health")
 def health():
-    return jsonify({
-        "status": "healthy"
-    })
+    return jsonify({"status": "healthy"})
 
 
 if __name__ == "__main__":
