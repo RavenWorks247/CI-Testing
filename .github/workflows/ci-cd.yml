@@ -1,90 +1,123 @@
 name: Demo CI/CD
 
 on:
-
   push:
-
     branches:
-
       - main
       - stage
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.12"
+  APP_DIR: /home/ubuntu/apps/demo
+  HEALTH_URL: http://localhost:5000/health
 
 jobs:
 
   lint:
-
     runs-on: ubuntu-latest
 
     steps:
-
       - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
 
-      - run: |
-          pip install flake8
-          flake8 .
+      - name: Install lint tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install black flake8
+
+      - name: Check formatting
+        run: |
+          black --check .
+
+      - name: Run flake8
+        run: |
+          flake8 --ignore=E203,W503 .
 
   tests:
-
     needs: lint
-
     runs-on: ubuntu-latest
 
     steps:
-
       - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
 
-      - run: |
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
           pip install -r requirements.txt
+
+      - name: Compile Python
+        run: |
+          python -m compileall .
+
+      - name: Run Tests
+        run: |
           pytest -v
 
   build:
-
     needs: tests
-
     runs-on: ubuntu-latest
 
     steps:
-
       - uses: actions/checkout@v4
 
-      - run: |
+      - name: Build Docker Image
+        run: |
           docker build -t demo:test .
 
   deploy:
-
     needs: build
-
     runs-on: self-hosted
 
     steps:
 
-      - run: |
-          cd /home/ubuntu/apps/demo
+      - name: Deploy latest code
+        run: |
+          set -e
+
+          cd $APP_DIR
 
           git fetch origin
 
-          git reset --hard origin/main
+          git reset --hard origin/${GITHUB_REF_NAME}
 
-          docker compose up -d --build
+          docker compose build
+
+          docker compose up -d --remove-orphans
 
   verify:
-
     needs: deploy
-
     runs-on: self-hosted
 
     steps:
 
-      - run: |
+      - name: Wait for application
+        run: |
+          sleep 10
 
-          sleep 5
+      - name: Health Check
+        run: |
+          curl --fail $HEALTH_URL
 
-          curl --fail http://localhost:5000/health
+  cleanup:
+    needs: verify
+    if: always()
+    runs-on: self-hosted
+
+    steps:
+
+      - name: Remove unused Docker images
+        run: |
+          docker image prune -af

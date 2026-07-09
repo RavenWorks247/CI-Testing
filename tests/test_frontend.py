@@ -3,8 +3,8 @@ from bs4 import BeautifulSoup
 
 client = app.test_client()
 
-def test_page_contains_title():
 
+def test_page_contains_title():
     response = client.get("/")
 
     soup = BeautifulSoup(response.data, "html.parser")
@@ -13,7 +13,6 @@ def test_page_contains_title():
 
 
 def test_button_exists():
-
     response = client.get("/")
 
     soup = BeautifulSoup(response.data, "html.parser")
