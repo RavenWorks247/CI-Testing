@@ -1,0 +1,89 @@
+name: Demo CI/CD
+
+on:
+
+  push:
+
+    branches:
+
+      - main
+
+jobs:
+
+  lint:
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: |
+          pip install flake8
+          flake8 .
+
+  tests:
+
+    needs: lint
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: |
+          pip install -r requirements.txt
+          pytest -v
+
+  build:
+
+    needs: tests
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - uses: actions/checkout@v4
+
+      - run: |
+          docker build -t demo:test .
+
+  deploy:
+
+    needs: build
+
+    runs-on: self-hosted
+
+    steps:
+
+      - run: |
+          cd /home/ubuntu/apps/demo
+
+          git fetch origin
+
+          git reset --hard origin/main
+
+          docker compose up -d --build
+
+  verify:
+
+    needs: deploy
+
+    runs-on: self-hosted
+
+    steps:
+
+      - run: |
+
+          sleep 5
+
+          curl --fail http://localhost:5000/health
